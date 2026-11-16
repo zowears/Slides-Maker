@@ -99,6 +99,9 @@ const Index = () => {
           >
             Urdu Slides Maker
           </h1>
+          <p className="mb-2 text-sm text-muted-foreground">
+            Developer: Muhammad Waqas <span aria-hidden="true">·</span> Department: Madani News
+          </p>
           {lastSaved && (
             <div className="flex items-center justify-center gap-1.5 text-[10px] font-medium text-muted-foreground uppercase tracking-widest">
                {isSaving ? (
