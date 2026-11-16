@@ -11,8 +11,10 @@ import useFontLoader from "@/hooks/useFontLoader";
 import { NewsroomWorkflow } from "@/components/NewsroomWorkflow";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TEMPLATES } from "@/types/templates";
-import { Sparkles, Image as ImageIcon, Check, Loader2 } from "lucide-react";
+import { Sparkles, Image as ImageIcon, Check, Loader2, Download } from "lucide-react";
 import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { generatePNG } from "@/lib/canvasExport";
 
 import { useWorkflowStore } from "@/hooks/useWorkflowStore";
 
@@ -41,6 +43,7 @@ const Index = () => {
   } = classicState;
   
   const fontLoaded = useFontLoader();
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // Handle Ctrl+S for manual save feedback
   useEffect(() => {
@@ -84,6 +87,34 @@ const Index = () => {
 
   const setTextStyle = (options: TextStyleOptions) => {
     setClassicState({ textStyle: options });
+  };
+
+  const downloadCurrentSlide = async () => {
+    if (!fontLoaded || !urduText.trim()) return;
+
+    setIsDownloading(true);
+    try {
+      const blob = await generatePNG(
+        { text: urduText, templateId: selectedTemplateId },
+        textStyle,
+        currentTemplate
+      );
+      const useTextAsFilename = ["dateBand", "addressBar", "addressBarEnglish", "nameBand", "reporterName"].includes(currentTemplate.id);
+      const safeFilename = useTextAsFilename
+        ? urduText.trim().replace(/[^a-zA-Z0-9\u0600-\u06FF\s]/g, "").replace(/\s+/g, "_").substring(0, 50) || "slide"
+        : "urdu-text";
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.download = `${safeFilename}.png`;
+      link.href = url;
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      console.error("Failed to download PNG slide:", error);
+      toast.error("Unable to download PNG slide");
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
 
@@ -196,12 +227,26 @@ const Index = () => {
               {isParagraphTemplate ? (
                 <RichTextEditor onContentChange={handleRichTextChange} content={""} />
               ) : (
-                <UrduTextInput
-                  value={urduText}
-                  onChange={(val) => setClassicState({ urduText: val })}
-                  multiLine={currentTemplate.multiLine}
-                  useEnglishFont={!!currentTemplate.fontFamily}
-                />
+                <div className="flex w-full max-w-4xl flex-col gap-3 sm:flex-row sm:items-center">
+                  <UrduTextInput
+                    value={urduText}
+                    onChange={(val) => setClassicState({ urduText: val })}
+                    multiLine={currentTemplate.multiLine}
+                    useEnglishFont={!!currentTemplate.fontFamily}
+                  />
+                  <Button
+                    onClick={downloadCurrentSlide}
+                    disabled={!fontLoaded || !urduText.trim() || isDownloading}
+                    className="shrink-0"
+                  >
+                    {isDownloading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="mr-2 h-4 w-4" />
+                    )}
+                    Download PNG Slide
+                  </Button>
+                </div>
               )}
 
               {/* Canvas Preview - Conditional based on template */}
